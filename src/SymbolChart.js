@@ -79,7 +79,6 @@ class SymbolChartComponent extends React.Component {
     };
 
     fetchInitialData = async () => {
-        console.log("Calling for candles");
         const toDate = new Date();
         const fromDate = new Date();
         fromDate.setDate(toDate.getDate() - 7); // Subtract 7 days from the current date
@@ -115,7 +114,6 @@ class SymbolChartComponent extends React.Component {
     }
 
     render() {
-        console.log("hello");
         const { height, width } = this.props;
         const { data } = this.state;
 
