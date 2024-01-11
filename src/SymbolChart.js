@@ -106,10 +106,10 @@ class SymbolChartComponent extends React.Component {
         const nextInterval = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), Math.ceil(now.getMinutes() / 5) * 5,0,0);
     
         const delay = nextInterval - now; // Time until the next 5-minute interval
-    
+        console.log('Next 5-minute interval:', delay);
         this.timer = setTimeout(() => {
             this.fetchInitialData();
-            this.interval = setInterval(this.getCandleDataForLastSevenDays, 5 * 60 * 1000); // 5 minutes interval
+            this.interval = setInterval(this.fetchInitialData, 5 * 60 * 1000); // 5 minutes interval
         }, delay);
     }
 
@@ -122,7 +122,7 @@ class SymbolChartComponent extends React.Component {
         }
 
         return (
-            <Chart type='cnavas+svg' symbol={this.props.symbol} timeFrame={this.props.timeFrame} data={data} width={width} height={height} />
+            <Chart type="hybrid" symbol={this.props.symbol} timeFrame={this.props.timeFrame} data={data} width={width} height={height} />
         );
     }
 }

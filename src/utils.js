@@ -9,7 +9,6 @@ export async function fetchCandleData(symbol,from, to) {
         "from": from,
         "to": to
     };
-	console.log(requestBody,"what")
     try {
         const response = await fetch(url, {
             method: 'POST',

@@ -203,7 +203,6 @@ class CandleStickChartPanToLoadMore extends React.Component {
 	render() {
 		const { type, width,height, ratio } = this.props;
 		const { data, ema26, ema12, macdCalculator, smaVolume50, xScale, xAccessor, displayXAccessor } = this.state;
-		console.log("in chart",data[data.length-1].close)
 
 		return (
 			<ChartCanvas ratio={ratio} width={width} height={height}
@@ -216,7 +215,7 @@ class CandleStickChartPanToLoadMore extends React.Component {
 						yExtents={[d => [d.high, d.low], ema26.accessor(), ema12.accessor()]}
 						padding={{ top: 10, bottom: 20 }}>
 					{/* <XAxis axisAt="bottom" orient="bottom" showTicks={false} outerTickSize={0} /> */}
-					<YAxis axisAt="right" orient="right" ticks={5} />
+					<YAxis axisAt="right" orient="right" ticks={2} />
 
 					<MouseCoordinateX
 						at="bottom"
