@@ -1,8 +1,7 @@
 import React from 'react';
 import Chart from './ChartClass';
-import {fetchCandleData} from './utils';
+import {fetchCandleData, formatLocalDate} from './utils';
 import { WS_ADDRESS } from './server_address';
-
 class SymbolChartComponent extends React.Component {
     state = {
         data: null,
@@ -11,7 +10,7 @@ class SymbolChartComponent extends React.Component {
     componentDidMount() {
         this.connectWebSocket();
         this.fetchInitialData();
-        this.setupDataFetchTimer();
+        this.setupDataFetchTimer(this.props.timeFrame);
     }
 
     componentDidUpdate(prevProps) {
@@ -40,6 +39,7 @@ class SymbolChartComponent extends React.Component {
         this.ws = new WebSocket(WS_ADDRESS);
 
         this.ws.onopen = () => {
+            console.log("Websock connected");
             this.ws.send("subscribe:"+this.props.symbol);
         };
 
@@ -60,7 +60,7 @@ class SymbolChartComponent extends React.Component {
         const cleanedMessage = message.replace(/\[|\]/g, '');
         const lastHyphenIndex = cleanedMessage.lastIndexOf("-");
         const ltp = parseFloat(cleanedMessage.substring(lastHyphenIndex + 1));
-
+        this.lastTickPrice = ltp;
         this.setState(prevState => {
             if (prevState.data == null) return { data: null };
             const newData = [...prevState.data];
@@ -78,17 +78,44 @@ class SymbolChartComponent extends React.Component {
         });
     };
 
+    handleTickTimer = () => {
+        if (this.state.data == null || !this.lastTickPrice) {
+            return;
+        }
+        
+        const timeFrameMinutes = parseInt(this.props.timeFrame.replace('minute', ''), 10);
+        const lastCandle = this.state.data[this.state.data.length - 1];
+    
+        // Parse the last candle's date and add timeFrame minutes
+        const newCandleDate = new Date(lastCandle.date);
+        newCandleDate.setMinutes(newCandleDate.getMinutes() + timeFrameMinutes);
+        const newCandle = {
+            open: this.lastTickPrice, // Assuming this.lastTickPrice is maintained
+            high: this.lastTickPrice,
+            low: this.lastTickPrice,
+            close: this.lastTickPrice,
+            date: newCandleDate, // Set the current time as timestamp
+        };
+        console.log("creating new candle");
+        this.setState(prevState => ({
+            data: [...prevState.data, newCandle]
+        }));
+    };
+
     fetchInitialData = async () => {
         const toDate = new Date();
+        toDate.setHours(23,59,59,999);
         const fromDate = new Date();
+        fromDate.setHours(0,0,0,0);
         fromDate.setDate(toDate.getDate() - 7); // Subtract 7 days from the current date
-
+        
         // Format the dates to 'YYYY-MM-DD HH:MM:SS' string format
-        const toDateString = toDate.toISOString().slice(0, 19).replace('T', ' ');
-        const fromDateString = fromDate.toISOString().slice(0, 19).replace('T', ' ');
+        const toDateString = formatLocalDate(toDate);
+        const fromDateString = formatLocalDate(fromDate);
+        console.log("calling data",this.props.symbol,toDateString);
 
         try {
-            const candleData = await fetchCandleData(this.props.symbol, fromDateString, toDateString);
+            const candleData = await fetchCandleData(this.props.symbol,this.props.timeFrame, fromDateString, toDateString);
             this.setState({ data: candleData });
         } catch (error) {
             console.error('Error fetching candle data:', error);
@@ -101,17 +128,40 @@ class SymbolChartComponent extends React.Component {
         this.connectWebSocket();
     };
 
-    setupDataFetchTimer = () => {
+    setupDataFetchTimer = (timeFrame = '5minute') => {
+        const timeFrameMinutes = parseInt(timeFrame.replace('minute', ''), 10);
         const now = new Date();
-        const nextInterval = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), Math.ceil(now.getMinutes() / 5) * 5,0,0);
+        const minutes = now.getMinutes();
+        const nextIntervalMinute = (Math.floor(minutes / timeFrameMinutes) + 1) * timeFrameMinutes;
+        const nextInterval = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), nextIntervalMinute, 0, 0);
     
-        const delay = nextInterval - now; // Time until the next 5-minute interval
+        // If the calculated next interval is actually in the past (which can happen if the minutes are exactly on the interval),
+        // add 5 minutes to shift to the next interval.
+        // if(nextInterval <= now) {
+        //     nextInterval.setMinutes(nextInterval.getMinutes() + timeFrameMinutes);
+        // }
+    
+        const delay = nextInterval - now; // Time until the next 5-minute interval + some buffer
         console.log('Next 5-minute interval:', delay);
+    
+        // Clear any existing timer to avoid multiple instances
+        if (this.timer) {
+            clearTimeout(this.timer);
+        }
+        if (this.interval) {
+            clearInterval(this.interval);
+        }
+    
         this.timer = setTimeout(() => {
-            this.fetchInitialData();
-            this.interval = setInterval(this.fetchInitialData, 5 * 60 * 1000); // 5 minutes interval
+            this.handleTickTimer();
+            // After the first timeout, set an interval for subsequent fetches
+            this.interval = setInterval(this.handleTickTimer, timeFrameMinutes * 60 * 1000); // 5 minutes interval
         }, delay);
-    }
+    };
+
+    updateDataFromChild = (newData) => {
+        this.setState({ data: newData });
+    };
 
     render() {
         const { height, width } = this.props;
@@ -122,7 +172,11 @@ class SymbolChartComponent extends React.Component {
         }
 
         return (
-            <Chart type="hybrid" symbol={this.props.symbol} timeFrame={this.props.timeFrame} data={data} width={width} height={height} />
+            <Chart 
+            key={`chart-${this.props.symbol}-${this.props.timeFrame}`}
+            type="hybrid" symbol={this.props.symbol} timeFrame={this.props.timeFrame} data={this.state.data} width={width} height={height}
+            onUpdateData={this.updateDataFromChild}
+             />
         );
     }
 }

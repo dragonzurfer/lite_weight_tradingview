@@ -46,7 +46,7 @@ const macdAppearance = {
 class CandleStickChartPanToLoadMore extends React.Component {
 	constructor(props) {
 		super(props);
-		const { data: inputData, symbol } = props;
+		const { data: inputData, symbol,timeFrame,width,height } = props;
 
 		const ema26 = ema()
 			.id(0)
@@ -91,6 +91,7 @@ class CandleStickChartPanToLoadMore extends React.Component {
 
 		// console.log(inputData.length, dataToCalculate.length, maxWindowSize)
 		const { index } = indexCalculator(calculatedData);
+		console.log("This is index",index);
 		/* SERVER - END */
 
 		const xScaleProvider = discontinuousTimeScaleProviderBuilder()
@@ -107,6 +108,9 @@ class CandleStickChartPanToLoadMore extends React.Component {
 			smaVolume50,
 			linearData,
 			symbol:symbol,
+			timeFrame: timeFrame,
+			width:width,
+			height:height,
 			data: linearData,
 			xScale,
 			xAccessor, displayXAccessor
@@ -135,15 +139,15 @@ class CandleStickChartPanToLoadMore extends React.Component {
 			const toDateString = earliestDate.toISOString().slice(0, 19).replace('T', ' ');
 		
 			// Fetch more data
-			const moreData = await fetchCandleData(this.state.symbol,fromDateString, toDateString);
+			const moreData = await fetchCandleData(this.state.symbol,this.state.timeFrame,fromDateString, toDateString);
 		
 			// Combine new data with existing data
 			const combinedData = moreData.concat(this.state.data);
 	
-		  // Update the state with the combined data
-		  const { ema26, ema12, macdCalculator, smaVolume50 } = this.state;
+		  	// Update the state with the combined data
+		  	const { ema26, ema12, macdCalculator, smaVolume50 } = this.state;
 
-  // Recalculate the scale with the new combined data
+  			// Recalculate the scale with the new combined data
 			const calculatedData = ema26(ema12(macdCalculator(smaVolume50(combinedData))));
 			const indexCalculator = discontinuousTimeScaleProviderBuilder().indexCalculator();
 
@@ -152,17 +156,17 @@ class CandleStickChartPanToLoadMore extends React.Component {
 			const xScaleProvider = discontinuousTimeScaleProviderBuilder().withIndex(index);
 			const { data: linearData, xScale, xAccessor, displayXAccessor } = xScaleProvider(calculatedData);
 
-  // Update the state with the new data and the recalculated scale
-  	this.setState({
-			data: linearData, // This is the combined data with the recalculated indices
-			xScale,
-			xAccessor,
-			displayXAccessor,
-			loadingMoreData: false,
-		}, () => {
+  			// Update the state with the new data and the recalculated scale
+			this.setState({
+					data: linearData, // This is the combined data with the recalculated indices
+					xScale,
+					xAccessor,
+					displayXAccessor,
+					loadingMoreData: false,
+				}, () => {
 				// After the state has been updated, adjust the xScale domain to create a buffer
 				const { xScale, xAccessor, data } = this.state;
-				
+				this.props.onUpdateData(this.state.data);
 				const totalPoints = data.length;
 				const bufferPoints = 5; // Number of points to leave as a buffer to the right
 				const startPoint = xAccessor(data[Math.max(0, totalPoints - bufferPoints)]);
@@ -182,6 +186,10 @@ class CandleStickChartPanToLoadMore extends React.Component {
 	componentDidUpdate(prevProps) {
 		if(this.props.data != null) {
 			if (this.props.data !== prevProps.data) {
+				this.setState({
+					width:this.props.width,
+					height:this.props.height
+				});
 				// Update the state with new data
 				// You might need to re-calculate anything that depends on the data
 				const newData = this.props.data;
@@ -190,22 +198,40 @@ class CandleStickChartPanToLoadMore extends React.Component {
 				const calculatedData = this.state.ema26(this.state.ema12(this.state.macdCalculator(this.state.smaVolume50(newData))));
 				const xScaleProvider = discontinuousTimeScaleProviderBuilder().withIndex(this.state.index);
 				const { data: linearData, xScale, xAccessor, displayXAccessor } = xScaleProvider(calculatedData);
-		
+				// console.log("setting:",linearData,this.props.timeFrame);
 				this.setState({
 					data: linearData,
 					xScale,
 					xAccessor,
-					displayXAccessor
+					displayXAccessor,
+					width:this.props.width,
+					height:this.props.height,
+				});
+			}
+			if(this.props.timeFrame != this.state.timeFrame) {
+				const newData = this.props.data;
+		
+				// Example: Re-calculating using your existing methods
+				const calculatedData = this.state.ema26(this.state.ema12(this.state.macdCalculator(this.state.smaVolume50(newData))));
+				const xScaleProvider = discontinuousTimeScaleProviderBuilder().withIndex(this.state.index);
+				const { data: linearData, xScale, xAccessor, displayXAccessor } = xScaleProvider(calculatedData);
+				// console.log("setting:",linearData,this.props.timeFrame);
+				this.setState({
+					data: linearData,
+					xScale,
+					xAccessor,
+					displayXAccessor,
 				});
 			}
 		}
 	}
 	render() {
-		const { type, width,height, ratio } = this.props;
-		const { data, ema26, ema12, macdCalculator, smaVolume50, xScale, xAccessor, displayXAccessor } = this.state;
+		const { type, ratio } = this.props;
+		const { data,width,height, ema26, ema12, smaVolume50, xScale, xAccessor, displayXAccessor } = this.state;
 
 		return (
 			<ChartCanvas ratio={ratio} width={width} height={height}
+					key={`chart-${this.props.symbol}-${this.props.timeFrame}`}
 					margin={{ left: 70, right: 70, top: 20, bottom: 30 }} type={type}
 					seriesName="MSFT"
 					data={data}
@@ -220,15 +246,15 @@ class CandleStickChartPanToLoadMore extends React.Component {
 					<MouseCoordinateX
 						at="bottom"
 						orient="bottom"
-						displayFormat={timeFormat("%Y-%m-%d")} />
+						displayFormat={timeFormat("%Y-%m-%d %H:%M")} />
 					<MouseCoordinateY
 						at="right"
 						orient="right"
 						displayFormat={format(".2f")} />
 
 					<CandlestickSeries />
-					<LineSeries yAccessor={ema26.accessor()} stroke={ema26.stroke()}/>
-					<LineSeries yAccessor={ema12.accessor()} stroke={ema12.stroke()}/>
+					{/* <LineSeries yAccessor={ema26.accessor()} stroke={ema26.stroke()}/>
+					<LineSeries yAccessor={ema12.accessor()} stroke={ema12.stroke()}/> */}
 
 					<CurrentCoordinate yAccessor={ema26.accessor()} fill={ema26.stroke()} />
 					<CurrentCoordinate yAccessor={ema12.accessor()} fill={ema12.stroke()} />

@@ -1,11 +1,11 @@
 import { timeParse } from "d3-time-format";
 import { DATA_ADDRESS } from './server_address';
 
-export async function fetchCandleData(symbol,from, to) {
+export async function fetchCandleData(symbol,tf,from, to) {
     const url = DATA_ADDRESS;
     const requestBody = {
         "Ticker": symbol,
-        "TimeFrame": "5minute",
+        "TimeFrame": tf,
         "from": from,
         "to": to
     };
@@ -50,3 +50,16 @@ function parseData(parse) {
         return d;
     };
 }
+
+export const formatLocalDate = (date) => {
+    const pad = (num) => (num < 10 ? `0${num}` : num);
+
+    const year = date.getFullYear();
+    const month = pad(date.getMonth() + 1); // getMonth() returns 0-11
+    const day = pad(date.getDate());
+    const hours = pad(date.getHours());
+    const minutes = pad(date.getMinutes());
+    const seconds = pad(date.getSeconds());
+
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+};

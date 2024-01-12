@@ -1,57 +1,96 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { render } from 'react-dom';
 import SymbolChartComponent from './SymbolChart';
 
+const IndividualChart = ({ initialSymbol, initialTimeFrame, width, height, onSelected }) => {
+    const [symbol, setSymbol] = useState(initialSymbol);
+    const [timeFrame, setTimeFrame] = useState(initialTimeFrame);
 
-class ChartComponent extends React.Component {
-    state = {
-        data: null,
-        splitView: false,
-        heightAdjustment: 0,
-        symbol: 'MCX:CRUDEOIL24JANFUT', // Default symbol
-        timeFrame: '5minute', // Default time frame
+    // Additional logic and effects if needed
+    // ...
+
+    useEffect(() => {
+        setSymbol(initialSymbol);
+        setTimeFrame(initialTimeFrame);
+    }, [initialSymbol, initialTimeFrame]);
+
+    return (
+        <div onClick={onSelected} style={{ width, height, boxSizing: 'border-box' }}>
+            <SymbolChartComponent 
+                symbol={symbol}
+                timeFrame={timeFrame}
+                width={width}
+                height={height}
+                // Other props if needed
+            />
+        </div>
+    );
+};
+
+const ChartComponent = () => {
+    const [selectedChart, setSelectedChart] = useState(null);
+    const [symbol, setSymbol] = useState('MCX:CRUDEOIL24JANFUT');
+    const [timeFrame, setTimeFrame] = useState('5minute');
+    const [splitView, setSplitView] = useState(false);
+
+    const parentWidth = window.innerWidth;
+    const parentHeight = window.innerHeight; // Adjust as needed
+
+    const handleSymbolChange = (event) => {
+        setSymbol(event.target.value);
     };
 
-    toggleView = () => {
-        this.setState(prevState => ({ splitView: !prevState.splitView }));
+    const handleTimeFrameChange = (event) => {
+        console.log("timeframe changed in ChartComp");
+        setTimeFrame(event.target.value);
     };
 
-    render() {
-        const { splitView, heightAdjustment } = this.state;
+    const toggleView = () => {
+        setSplitView(!splitView);
+    };
 
-        const parentWidth = window.innerWidth;
-        const parentHeight = window.innerHeight - heightAdjustment; // Use the dynamic height adjustment
-        const chartWidth = splitView ? parentWidth / 2 : parentWidth;
+    const chartWidth = splitView ? parentWidth / 2 : parentWidth;
 
-        return (
-            <div style={{ overflow: 'hidden', height: parentHeight }}>
-                <button ref={this.buttonRef} onClick={this.toggleView}>Toggle View</button>
-                <div style={{ display: 'flex', width: '100%', height: parentHeight }}>
-                    <div style={{ width: chartWidth, height: '100%', boxSizing: 'border-box' }}>
-                    <SymbolChartComponent 
-                        width={chartWidth} 
-                        height={parentHeight} 
-                        symbol={this.state.symbol} 
-                        timeFrame={this.state.timeFrame} 
+    return (
+        <div style={{ overflow: 'hidden', height: parentHeight }}>
+            <button onClick={toggleView}>Toggle View</button>
+            <input 
+                type="text" 
+                value={symbol} 
+                onChange={handleSymbolChange} 
+                placeholder="Enter Symbol"
+            />
+            <select value={timeFrame} onChange={handleTimeFrameChange}>
+                <option value="5minute">5 minutes</option>
+                <option value="15minute">15 minutes</option>
+                <option value="30minute">30 minutes</option>
+                <option value="60minute">60 minutes</option>
+            </select>
+            <div style={{ display: 'flex', width: '100%', height: parentHeight }}>
+                <IndividualChart 
+                    initialSymbol={symbol}
+                    initialTimeFrame={timeFrame}
+                    width={chartWidth}
+                    height={parentHeight}
+                    onSelected={() => setSelectedChart('chart1')}
+                />
+                {splitView && (
+                    <IndividualChart 
+                        initialSymbol={symbol} // Or different symbol for the second chart
+                        initialTimeFrame={timeFrame}
+                        width={chartWidth}
+                        height={parentHeight}
+                        onSelected={() => setSelectedChart('chart2')}
                     />
-                    </div>
-                    {splitView && (
-                        <div style={{ width: chartWidth, height: '100%', boxSizing: 'border-box' }}>
-                            <SymbolChartComponent 
-                                width={chartWidth} 
-                                height={parentHeight} 
-                                symbol="MCX:GOLD24FEBFUT" 
-                                timeFrame={this.state.timeFrame} 
-                            />
-                        </div>
-                    )}
-                </div>
+                )}
             </div>
-        );
-    }
-}
+        </div>
+    );
+};
 
 render(
-    <ChartComponent />,
-    document.getElementById("root")
+    <React.StrictMode>
+      <ChartComponent />
+    </React.StrictMode>,
+    document.getElementById('root')
 );
