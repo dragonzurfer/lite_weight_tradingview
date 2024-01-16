@@ -13,26 +13,12 @@ const SymbolChartComponent = ({ symbol, timeFrame, width, height }) => {
     useEffect(() => {
         connectWebSocket();
         fetchInitialData();
-        setupDataFetchTimer(timeFrame);
-
-        return () => {
-            if (ws.current) {
-                ws.current.close();
-            }
-            if (timer.current) {
-                clearTimeout(timer.current);
-            }
-            if (interval.current) {
-                clearInterval(interval.current);
-            }
-        };
     }, []); // Only on mount and unmount
 
     useEffect(() => {
         updateSubscription();
         console.log("symbol or tf changed");
         fetchInitialData();
-        setupDataFetchTimer(timeFrame);
     }, [symbol, timeFrame]); // On symbol or timeFrame change
 
     useEffect(() => {
@@ -43,7 +29,7 @@ const SymbolChartComponent = ({ symbol, timeFrame, width, height }) => {
         ws.current = new WebSocket(WS_ADDRESS);
         ws.current.onopen = () => {
             console.log("WebSocket connected");
-            ws.current.send("subscribe:" + "NSE:NIFTY50-INDEX");
+            ws.current.send("subscribe:" + symbol);
         };
         ws.current.onmessage = (event) => {
             handleNewTick(event.data);
@@ -56,53 +42,47 @@ const SymbolChartComponent = ({ symbol, timeFrame, width, height }) => {
         };
     };
 
-    const handleNewTick = async (message) => {
+    const handleNewTick = (message) => {
         const cleanedMessage = message.replace(/\[|\]/g, '');
         const lastHyphenIndex = cleanedMessage.lastIndexOf("-");
         const ltp = parseFloat(cleanedMessage.substring(lastHyphenIndex + 1));
         lastTickPrice.current = ltp;
 
         setData(prevData => {
-            if (data == null) return null;
-            const newData = [...data];
-            const lastCandle = newData.length > 0 ? { ...newData[newData.length - 1] } : null;
-            if (lastCandle) {
+            if (!prevData || prevData.length === 0) return null;
+            const newData = [...prevData];
+            const lastCandle = { ...newData[newData.length - 1] };
+            const currentTime = new Date();
+
+            // Calculate the start time for the next candle based on the last candle's date
+            const timeFrameMinutes = 1;//parseInt(timeFrame.replace('minute', ''), 10);
+            const nextCandleStartTime = new Date(lastCandle.date);
+            nextCandleStartTime.setMinutes(nextCandleStartTime.getMinutes() + timeFrameMinutes);
+
+            if (currentTime >= nextCandleStartTime) {
+                // Time to start a new candle
+                console.log("appending new candle");
+                const newCandle = {
+                    date: nextCandleStartTime,
+                    open: ltp,
+                    high: ltp,
+                    low: ltp,
+                    close: ltp,
+                    volume: 0 // Adjust the volume as necessary
+                };
+                newData.push(newCandle);
+            } else {
+                // Update the last candle with the new LTP
                 lastCandle.close = ltp;
-                if (ltp > lastCandle.high) {
-                    lastCandle.high = ltp;
-                }
-                if (ltp < lastCandle.low) {
-                    lastCandle.low = ltp;
-                }
+                lastCandle.high = Math.max(lastCandle.high, ltp);
+                lastCandle.low = Math.min(lastCandle.low, ltp);
                 newData[newData.length - 1] = lastCandle;
             }
-            console.log("tick", newData.length);
+
             return newData;
         });
     };
 
-    const handleTickTimer = () => {
-        lastTickPrice.current = 6046;
-        console.log(dataRef.current, lastTickPrice.current)
-        if (!dataRef.current || !lastTickPrice.current) {
-            return;
-        }
-        const timeFrameMinutes = parseInt(timeFrame.replace('minute', ''), 10);
-        const lastCandle = dataRef.current[dataRef.current.length - 1];
-
-        const newCandleDate = new Date(lastCandle ? lastCandle.date : new Date());
-        newCandleDate.setMinutes(newCandleDate.getMinutes() + timeFrameMinutes);
-
-        const newCandle = {
-            open: lastTickPrice.current,
-            high: lastTickPrice.current,
-            low: lastTickPrice.current,
-            close: lastTickPrice.current,
-            date: newCandleDate
-        };
-
-        setData(prevData => [...(prevData || []), newCandle]);
-    };
 
     const fetchInitialData = async () => {
         const toDate = new Date();
@@ -128,28 +108,6 @@ const SymbolChartComponent = ({ symbol, timeFrame, width, height }) => {
             ws.current.close();
             connectWebSocket(); // Reconnect the WebSocket with the new symbol
         }
-    };
-
-    const setupDataFetchTimer = (tf) => {
-        const timeFrameMinutes = 1;//parseInt(tf.replace('minute', ''), 10);
-        const now = new Date();
-        const minutes = now.getMinutes();
-        const nextIntervalMinute = (Math.floor(minutes / timeFrameMinutes) + 1) * timeFrameMinutes;
-        const nextInterval = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), nextIntervalMinute, 0, 0);
-
-        const delay = nextInterval - now; // Time until the next interval
-        console.log("next in", delay);
-        if (timer.current) {
-            clearTimeout(timer.current);
-        }
-        if (interval.current) {
-            clearInterval(interval.current);
-        }
-
-        timer.current = setTimeout(() => {
-            handleTickTimer();
-            interval.current = setInterval(handleTickTimer, timeFrameMinutes * 60 * 1000);
-        }, delay);
     };
 
     const loadMore = async (start, end) => {

@@ -55,22 +55,28 @@ const CandleStickChartPanToLoadMore = ({ symbol, timeFrame, initialData, width, 
 
 	if (!data || !xScale || !xAccessor || !displayXAccessor) {
 		// console.log(initialData);
-		console.log(data.legnth);
+		console.log(data.length);
 		return <div>Loading chart...</div>; // Render a loading state or null
 	}
 
+	const margin = { left: 70, right: 70, top: 20, bottom: 30 };
+	const gridHeight = height - margin.top - margin.bottom;
+	const gridWidth = width - margin.left - margin.right;
+	const showGrid = true;
+	const yGrid = showGrid ? { innerTickSize: -1 * gridWidth, tickStrokeOpacity: 0.1 } : {};
+	const xGrid = showGrid ? { innerTickSize: -1 * gridHeight, tickStrokeOpacity: 0.1 } : {};
 	// Render chart with necessary props and components
 	return (
 		<ChartCanvas key={data.length} ratio={1} width={width} height={height}
-			margin={{ left: 70, right: 70, top: 20, bottom: 30 }} type="hybrid"
-			seriesName="MSFT"
+			margin={margin} type="hybrid"
+			seriesName={symbol}
 			data={data}
 			xScale={xScale} xAccessor={xAccessor} displayXAccessor={displayXAccessor}>
 			<Chart id={1} height={height * 0.8}
 				yExtents={[d => [d.high, d.low], ema26.accessor(), ema12.accessor()]}
 				padding={{ top: 10, bottom: 20 }}>
-				{/* <XAxis axisAt="bottom" orient="bottom" showTicks={false} outerTickSize={0} /> */}
-				<YAxis axisAt="right" orient="right" ticks={2} />
+				<XAxis axisAt="bottom" orient="bottom" ticks={10} {...xGrid} />
+				<YAxis axisAt="right" orient="right" ticks={10} {...yGrid} />
 
 				<MouseCoordinateX
 					at="bottom"
@@ -123,7 +129,7 @@ const CandleStickChartPanToLoadMore = ({ symbol, timeFrame, initialData, width, 
 
 				<BarSeries yAccessor={d => d.volume} fill={d => d.close > d.open ? "#6BA583" : "#FF0000"} />
 				<AreaSeries yAccessor={smaVolume50.accessor()} stroke={smaVolume50.stroke()} fill={smaVolume50.fill()} />
-				<XAxis axisAt="bottom" orient="bottom" />
+
 			</Chart>
 			<CrossHairCursor />
 		</ChartCanvas>

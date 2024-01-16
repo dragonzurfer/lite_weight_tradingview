@@ -29,7 +29,7 @@ const IndividualChart = ({ initialSymbol, initialTimeFrame, width, height, onSel
 
 const ChartComponent = () => {
     const [selectedChart, setSelectedChart] = useState(null);
-    const [symbol, setSymbol] = useState('MCX:CRUDEOIL24JANFUT');
+    const [symbol, setSymbol] = useState('NSE:NIFTY50-INDEX');
     const [timeFrame, setTimeFrame] = useState('5minute');
     const [splitView, setSplitView] = useState(false);
 
