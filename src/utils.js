@@ -1,7 +1,7 @@
 import { timeParse } from "d3-time-format";
 import { DATA_ADDRESS } from './server_address';
 
-export async function fetchCandleData(symbol,tf,from, to) {
+export async function fetchCandleData(symbol, tf, from, to) {
     const url = DATA_ADDRESS;
     const requestBody = {
         "Ticker": symbol,
@@ -40,13 +40,13 @@ export async function fetchCandleData(symbol,tf,from, to) {
 const parseDate = timeParse("%Y-%m-%dT%H:%M:%S%Z");
 
 function parseData(parse) {
-    return function(d) {
+    return function (d) {
         d.date = parse(d.Timestamp);
         d.open = +d.Open;
         d.high = +d.High;
         d.low = +d.Low;
         d.close = +d.Close;
-        // d.volume = +d.Volume; // Uncomment if volume is included in the data
+        d.volume = +d.Volume;
         return d;
     };
 }

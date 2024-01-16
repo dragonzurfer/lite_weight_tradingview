@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { render } from 'react-dom';
-import SymbolChartComponent from './SymbolChart';
+import SymbolChartComponent from './SymbolChartFunctional';
 
 const IndividualChart = ({ initialSymbol, initialTimeFrame, width, height, onSelected }) => {
     const [symbol, setSymbol] = useState(initialSymbol);
@@ -16,12 +16,12 @@ const IndividualChart = ({ initialSymbol, initialTimeFrame, width, height, onSel
 
     return (
         <div onClick={onSelected} style={{ width, height, boxSizing: 'border-box' }}>
-            <SymbolChartComponent 
+            <SymbolChartComponent
                 symbol={symbol}
                 timeFrame={timeFrame}
                 width={width}
                 height={height}
-                // Other props if needed
+            // Other props if needed
             />
         </div>
     );
@@ -54,10 +54,10 @@ const ChartComponent = () => {
     return (
         <div style={{ overflow: 'hidden', height: parentHeight }}>
             <button onClick={toggleView}>Toggle View</button>
-            <input 
-                type="text" 
-                value={symbol} 
-                onChange={handleSymbolChange} 
+            <input
+                type="text"
+                value={symbol}
+                onChange={handleSymbolChange}
                 placeholder="Enter Symbol"
             />
             <select value={timeFrame} onChange={handleTimeFrameChange}>
@@ -67,7 +67,7 @@ const ChartComponent = () => {
                 <option value="60minute">60 minutes</option>
             </select>
             <div style={{ display: 'flex', width: '100%', height: parentHeight }}>
-                <IndividualChart 
+                <IndividualChart
                     initialSymbol={symbol}
                     initialTimeFrame={timeFrame}
                     width={chartWidth}
@@ -75,7 +75,7 @@ const ChartComponent = () => {
                     onSelected={() => setSelectedChart('chart1')}
                 />
                 {splitView && (
-                    <IndividualChart 
+                    <IndividualChart
                         initialSymbol={symbol} // Or different symbol for the second chart
                         initialTimeFrame={timeFrame}
                         width={chartWidth}
@@ -90,7 +90,7 @@ const ChartComponent = () => {
 
 render(
     <React.StrictMode>
-      <ChartComponent />
+        <ChartComponent />
     </React.StrictMode>,
     document.getElementById('root')
 );
