@@ -55,7 +55,7 @@ const SymbolChartComponent = ({ symbol, timeFrame, width, height }) => {
             const currentTime = new Date();
 
             // Calculate the start time for the next candle based on the last candle's date
-            const timeFrameMinutes = 1;//parseInt(timeFrame.replace('minute', ''), 10);
+            const timeFrameMinutes = parseInt(timeFrame.replace('minute', ''), 10);
             const nextCandleStartTime = new Date(lastCandle.date);
             nextCandleStartTime.setMinutes(nextCandleStartTime.getMinutes() + timeFrameMinutes);
 

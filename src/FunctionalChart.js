@@ -10,9 +10,8 @@ import { discontinuousTimeScaleProviderBuilder } from "react-stockcharts/lib/sca
 import { OHLCTooltip, MovingAverageTooltip } from "react-stockcharts/lib/tooltip";
 import { ema, sma, macd } from "react-stockcharts/lib/indicator";
 import { fitWidth } from "react-stockcharts/lib/helper";
-import { fetchCandleData } from "./utils";
 
-const LENGTH_TO_SHOW = 180;
+let LENGTH_TO_SHOW = 180;
 const macdAppearance = { /* ... */ };
 
 function getMaxUndefined(calculators) {
@@ -34,10 +33,11 @@ function getChartProps(data, maxWindowSize, ema12, ema26, smaVolume50) {
 
 const CandleStickChartPanToLoadMore = ({ symbol, timeFrame, initialData, width, height, onUpdateData }) => {
 	const [data, setData] = useState([]);
-	const [loadingMoreData, setLoadingMoreData] = useState(false);
+	const [xExtents, setXExtents] = useState();
 	const [xScale, setXScale] = useState();
 	const [xAccessor, setXAccessor] = useState();
 	const [displayXAccessor, setDisplayXAccessor] = useState();
+
 
 	const ema26 = useMemo(() => ema().id(0).options({ windowSize: 26 }).merge((d, c) => { d.ema26 = c; }).accessor(d => d.ema26));
 	const ema12 = useMemo(() => ema().id(1).options({ windowSize: 12 }).merge((d, c) => { d.ema12 = c; }).accessor(d => d.ema12));
@@ -47,15 +47,16 @@ const CandleStickChartPanToLoadMore = ({ symbol, timeFrame, initialData, width, 
 	useEffect(() => {
 		const { linearData, xScale, xAccessor, displayXAccessor } = getChartProps(initialData, maxWindowSize, ema12, ema26, smaVolume50);
 		setData([...linearData]);
-		setXScale(() => xScale);
-		setXAccessor(() => xAccessor);
-		setDisplayXAccessor(() => displayXAccessor);
-		console.log("init data", linearData.length, linearData[0].date);
+		if (xExtents == null) {
+			setXScale(() => xScale);
+			setXAccessor(() => xAccessor);
+			setDisplayXAccessor(() => displayXAccessor);
+			setXExtents([xAccessor(linearData[Math.max(0, linearData.length - LENGTH_TO_SHOW)]), xAccessor(linearData[linearData.length - 1])]);
+			console.log("habibi");
+		}
 	}, [symbol, timeFrame, initialData]);
 
 	if (!data || !xScale || !xAccessor || !displayXAccessor) {
-		// console.log(initialData);
-		console.log(data.length);
 		return <div>Loading chart...</div>; // Render a loading state or null
 	}
 
@@ -65,12 +66,12 @@ const CandleStickChartPanToLoadMore = ({ symbol, timeFrame, initialData, width, 
 	const showGrid = true;
 	const yGrid = showGrid ? { innerTickSize: -1 * gridWidth, tickStrokeOpacity: 0.1 } : {};
 	const xGrid = showGrid ? { innerTickSize: -1 * gridHeight, tickStrokeOpacity: 0.1 } : {};
-	// Render chart with necessary props and components
 	return (
-		<ChartCanvas key={data.length} ratio={1} width={width} height={height}
+		<ChartCanvas ratio={1} width={width} height={height}
 			margin={margin} type="hybrid"
 			seriesName={symbol}
 			data={data}
+			xExtents={xExtents}
 			xScale={xScale} xAccessor={xAccessor} displayXAccessor={displayXAccessor}>
 			<Chart id={1} height={height * 0.8}
 				yExtents={[d => [d.high, d.low], ema26.accessor(), ema12.accessor()]}
